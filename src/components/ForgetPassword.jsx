@@ -11,14 +11,18 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-      if (!email.trim()) {
-      toast.error("Please enter your email");
+    if (!email.trim()) {
+      toast.error("Please enter your registered email address.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      toast.error("That doesn't look like a valid email address. Example: name@example.com");
       return;
     }
     try {
       setLoading(true);
       const response = await authApi.resetPasswordToken({
-        email,
+        email: email.trim(),
       });
 
       if (response?.success) {

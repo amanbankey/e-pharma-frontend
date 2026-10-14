@@ -26,25 +26,28 @@ export default function UpdatePassword() {
 
     if (!token) {
       setError('Reset token is missing from the link. Please request a new link.');
-      toast.error('Reset token missing');
+      toast.error('This reset link is incomplete. Please request a new link.');
       return;
     }
 
     if (!password || !confirmPassword) {
-      setError('Please fill in both password fields.');
-      toast.error('Please enter all required details');
+      const msg = !password
+        ? 'Please enter your new password.'
+        : 'Please re-enter your new password in the confirm field.';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.');
-      toast.error('Password too short');
+      toast.error('Password is too short. Please use at least 6 characters.');
       return;
     }
 
     if (password !== confirmPassword) {
       setError('New password and confirm password do not match.');
-      toast.error('Passwords do not match');
+      toast.error('New password and confirm password do not match.');
       return;
     }
 
@@ -128,7 +131,7 @@ export default function UpdatePassword() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="mt-7 space-y-4">
               {/* New Password */}
               <div>
                 <label className="text-sm font-medium text-ink-soft">New Password</label>

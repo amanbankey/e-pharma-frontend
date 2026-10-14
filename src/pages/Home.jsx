@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, ShieldCheck, Truck, Pill, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import ProductDetailModal from '../components/ProductDetailModal';
 import { useState, useEffect } from 'react';
 import { productApi, categoryApi, mapProduct } from '../lib/api';
 
@@ -17,11 +18,18 @@ const heroItem = {
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    productApi.getAll().then((data) => setFeatured(data.products.slice(0, 4).map(mapProduct)));
+    productApi.getAll().then((data) => setFeatured(data.products.slice(0, 8).map(mapProduct)));
     categoryApi.getAll().then((data) => setCategories(data.categories || [])).catch(() => {});
   }, []);
+
+  const openProductDetail = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
 
   return (
     <div>
@@ -145,21 +153,36 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-teal-100/50 py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-10">
-          <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-            <h2 className="font-display text-3xl text-teal-900 sm:text-4xl">Trending this week</h2>
-            <Link to="/products" className="text-sm font-semibold text-teal-900 underline decoration-gold-400 decoration-2 underline-offset-4">
-              Browse catalogue
+      <section className="bg-teal-100/50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-teal-950">Trending this week</h2>
+              <p className="text-xs sm:text-sm text-ink-soft mt-1">Popular certified medicines and healthcare essentials</p>
+            </div>
+            <Link to="/products" className="text-xs sm:text-sm font-semibold text-teal-900 underline decoration-gold-400 decoration-2 underline-offset-4 hover:text-teal-700">
+              Browse full catalogue →
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 sm:gap-3.5">
             {featured.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} />
+              <ProductCard 
+                key={p.id} 
+                product={p} 
+                index={i} 
+                onCardClick={openProductDetail}
+              />
             ))}
           </div>
         </div>
       </section>
+
+      {/* Product Detail Modal Popup */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

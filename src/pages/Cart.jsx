@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Minus, Plus, Trash2, ShoppingBag, CreditCard, Banknote, LogIn, AlertCircle, MapPin, Edit3 } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, LogIn, AlertCircle, MapPin, Edit3 } from 'lucide-react';
 import { useCart } from '../lib/CartContext';
 import { useAuth } from '../lib/AuthContext';
-import { orderApi, loadRazorpayScript } from '../lib/api';
+import { useCheckout } from '../lib/useCheckout';
 import DeliveryAddressModal from '../components/DeliveryAddressModal';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 export default function Cart() {
   const { items, updateQty, removeItem, total, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'cod'
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  const { loading, errorMsg, checkout } = useCheckout({
+    onSuccess: () => {
+      setIsAddressModalOpen(false);
+      clearCart();
+      navigate('/profile');
+    },
+  });
 
   useEffect(() => {
     if (user?.address && !address) {
@@ -23,141 +30,17 @@ export default function Cart() {
     }
   }, [user]);
 
-  const handleRazorpayCheckout = async (finalAddress) => {
-    const deliveryAddress = finalAddress || address;
-    if (!deliveryAddress?.trim()) {
-      setErrorMsg('Please enter a delivery address');
-      return;
-    }
-
-    setErrorMsg('');
-    setLoading(true);
-
-    try {
-      const ok = await loadRazorpayScript();
-      if (!ok || !window.Razorpay) {
-        throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
-      }
-
-      const orderData = await orderApi.createOrder({
-        items: items.map((i) => ({
-          product: i.id,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-        })),
-        amount: total,
-        address: deliveryAddress,
-      });
-
-      const { order } = orderData;
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY,
-        amount: order.amount,
-        currency: order.currency || 'INR',
-        order_id: order.id,
-        name: 'Vernal Rx',
-        description: 'Pharmacy Order Payment',
-        prefill: {
-          name: user?.fullName || '',
-          email: user?.email || '',
-          contact: user?.phone || '',
-        },
-        handler: async (response) => {
-          try {
-            await orderApi.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              items: items.map((i) => ({
-                product: i.id,
-                name: i.name,
-                qty: i.qty,
-                price: i.price,
-              })),
-              amount: total,
-              address: deliveryAddress,
-            });
-
-            setIsAddressModalOpen(false);
-            clearCart();
-            navigate('/profile');
-          } catch (verifyErr) {
-            setErrorMsg(verifyErr?.message || 'Payment verification failed');
-            setLoading(false);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoading(false);
-          },
-        },
-        theme: {
-          color: '#124C42',
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-
-      rzp.on('payment.failed', (response) => {
-        setErrorMsg(
-          response?.error?.description || 'Payment failed. Please try again or use Cash on Delivery.'
-        );
-        setLoading(false);
-      });
-
-      // Close our address popup when razorpay opens so they don't conflict
-      setIsAddressModalOpen(false);
-      rzp.open();
-    } catch (err) {
-      setErrorMsg(err?.message || 'Failed to initiate payment. Please try again.');
-      setLoading(false);
-      throw err;
-    }
-  };
-
-  const handleCodCheckout = async (finalAddress) => {
-    const deliveryAddress = finalAddress || address;
-    if (!deliveryAddress?.trim()) {
-      setErrorMsg('Please enter a delivery address');
-      return;
-    }
-
-    setErrorMsg('');
-    setLoading(true);
-
-    try {
-      await orderApi.createCodOrder({
-        items: items.map((i) => ({
-          product: i.id,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-        })),
-        amount: total,
-        address: deliveryAddress,
-      });
-
-      setIsAddressModalOpen(false);
-      clearCart();
-      navigate('/profile');
-    } catch (err) {
-      setErrorMsg(err?.message || 'Failed to place Cash on Delivery order.');
-      setLoading(false);
-      throw err;
-    }
-  };
-
   const handleConfirmedAddress = async ({ address: confirmedAddr, city: confirmedCity, state: confirmedState }) => {
     const fullAddress = `${confirmedAddr}, ${confirmedCity}, ${confirmedState}`.trim();
     setAddress(confirmedAddr);
 
-    if (paymentMethod === 'cod') {
-      await handleCodCheckout(fullAddress);
-    } else {
-      await handleRazorpayCheckout(fullAddress);
-    }
+    await checkout({
+      paymentMethod,
+      items,
+      total,
+      address: fullAddress,
+      onBeforeOpen: () => setIsAddressModalOpen(false),
+    });
   };
 
   const handleCheckoutClick = () => {
@@ -271,60 +154,7 @@ export default function Cart() {
 
           {/* Payment Method Selector */}
           <div className="mt-5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Payment Method</label>
-            <div className="mt-2 space-y-2">
-              <label
-                onClick={() => setPaymentMethod('razorpay')}
-                className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 transition ${
-                  paymentMethod === 'razorpay'
-                    ? 'border-teal-700 bg-teal-50/50'
-                    : 'border-line hover:border-teal-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-100 text-teal-800">
-                    <CreditCard size={18} />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-teal-900">Pay Online (Razorpay)</p>
-                    <p className="text-xs text-ink-soft">UPI, Credit/Debit Cards, NetBanking</p>
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  checked={paymentMethod === 'razorpay'}
-                  onChange={() => setPaymentMethod('razorpay')}
-                  className="accent-teal-700"
-                />
-              </label>
-
-              <label
-                onClick={() => setPaymentMethod('cod')}
-                className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 transition ${
-                  paymentMethod === 'cod'
-                    ? 'border-teal-700 bg-teal-50/50'
-                    : 'border-line hover:border-teal-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-amber-100 text-amber-800">
-                    <Banknote size={18} />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-teal-900">Pay Cash on Delivery</p>
-                    <p className="text-xs text-ink-soft">Pay cash when medicine arrives at your doorstep</p>
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  checked={paymentMethod === 'cod'}
-                  onChange={() => setPaymentMethod('cod')}
-                  className="accent-teal-700"
-                />
-              </label>
-            </div>
+            <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
           </div>
 
           {/* Error Message display */}

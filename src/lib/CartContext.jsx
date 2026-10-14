@@ -1,17 +1,37 @@
-import { createContext, useContext, useState, useMemo } from 'react';
+import { createContext, useContext, useState, useMemo, useEffect } from 'react';
 
 const CartContext = createContext(null);
+const CART_STORAGE_KEY = 'vernalrx_cart';
+
+const loadStoredCart = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CART_STORAGE_KEY));
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(loadStoredCart);
 
-  const addItem = (product) => {
+  // Keep the cart across page refreshes / closing the tab
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // storage unavailable (private mode / quota) - cart still works for this session
+    }
+  }, [items]);
+
+  const addItem = (product, quantity = 1) => {
+    const addCount = Math.max(1, Number(quantity) || 1);
     setItems((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       if (existing) {
-        return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
+        return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + addCount } : i));
       }
-      return [...prev, { ...product, qty: 1 }];
+      return [...prev, { ...product, qty: addCount }];
     });
   };
 

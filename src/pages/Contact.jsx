@@ -1,13 +1,41 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { contactApi } from '../lib/api';
 
 export default function Contact() {
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSent(true);
+    const formEl = e.target;
+    const data = new FormData(formEl);
+    const name = (data.get('name') || '').trim();
+    const phone = (data.get('phone') || '').trim();
+    const email = (data.get('email') || '').trim();
+    const message = (data.get('message') || '').trim();
+
+    setSent(false);
+    if (!name) return toast.error('Please enter your full name.');
+    if (!phone) return toast.error('Please enter your phone number.');
+    if (!/^\d{10}$/.test(phone)) return toast.error('Phone number must be exactly 10 digits.');
+    if (!email) return toast.error('Please enter your email address.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) return toast.error("That doesn't look like a valid email address.");
+    if (!message) return toast.error('Please write your message before sending.');
+
+    setSending(true);
+    try {
+      const res = await contactApi.send({ name, phone, email, message });
+      toast.success(res.message || 'Your message has been sent successfully!');
+      formEl.reset();
+      setSent(true);
+    } catch (err) {
+      toast.error(err.message || 'Could not send your message. Please try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -62,35 +90,37 @@ export default function Contact() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
           onSubmit={handleSubmit}
+          noValidate
           className="lg:col-span-3 rounded-2xl border border-line bg-paper p-7"
         >
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-ink-soft">Full name</label>
-              <input required className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
+              <input name="name" className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
             </div>
             <div>
               <label className="text-sm font-medium text-ink-soft">Phone number</label>
-              <input required className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
+              <input name="phone" type="tel" maxLength={10} className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
             </div>
             <div className="sm:col-span-2">
               <label className="text-sm font-medium text-ink-soft">Email</label>
-              <input type="email" required className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
+              <input name="email" type="email" className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
             </div>
             <div className="sm:col-span-2">
               <label className="text-sm font-medium text-ink-soft">Message</label>
-              <textarea rows={5} required className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
+              <textarea name="message" rows={5} className="mt-1.5 w-full rounded-xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-teal-500" />
             </div>
           </div>
 
           <button
             type="submit"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal-900 px-7 py-3.5 font-semibold text-cream transition hover:bg-teal-700"
+            disabled={sending}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal-900 px-7 py-3.5 font-semibold text-cream transition hover:bg-teal-700 disabled:opacity-60"
           >
-            <Send size={16} /> Send message
+            <Send size={16} /> {sending ? 'Sending…' : 'Send message'}
           </button>
 
-          {sent && <p className="mt-4 text-sm font-medium text-teal-700">Thanks — we'll get back to you shortly.</p>}
+          {sent && <p className="mt-4 text-sm font-medium text-teal-700">Thanks — your message has been sent. We'll get back to you shortly.</p>}
         </motion.form>
       </div>
     </div>

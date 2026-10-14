@@ -12,6 +12,7 @@ import {
   Banknote,
   ShieldCheck,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 import { authApi } from '../lib/api';
 
@@ -37,7 +38,9 @@ export default function DeliveryAddressModal({
       setAddress(user.address || '');
       setCity(user.city || '');
       setState(user.state || '');
+      setPhone(user.phone || '');
       setErrorMsg('');
+      setIsSaving(false);
     }
   }, [user, isOpen]);
 
@@ -57,23 +60,27 @@ export default function DeliveryAddressModal({
     const cleanAddress = address.trim();
     const cleanCity = city.trim();
     const cleanState = state.trim();
-    
+    const cleanPhone = phone.trim();
+
+    const fail = (msg) => {
+      setErrorMsg(msg);
+      toast.error(msg);
+    };
+
     if (!cleanAddress) {
-      setErrorMsg('Please enter your complete street/delivery address');
-      return;
+      return fail('Please enter your complete delivery address (house/flat no., street, area).');
+    }
+    if (!cleanPhone) {
+      return fail('Please enter a phone number so our delivery partner can contact you.');
+    }
+    if (!validatePhone(cleanPhone)) {
+      return fail('Phone number must be exactly 10 digits (without +91).');
     }
     if (!cleanCity) {
-      setErrorMsg('Please enter your city');
-      return;
+      return fail('Please enter your city.');
     }
     if (!cleanState) {
-      setErrorMsg('Please enter your state');
-      return;
-    }
-
-    if(!phone) {
-      setErrorMsg('Please enter your number')
-      return
+      return fail('Please enter your state.');
     }
 
     setIsSaving(true);
@@ -83,14 +90,14 @@ export default function DeliveryAddressModal({
         address: cleanAddress,
         city: cleanCity,
         state: cleanState,
-        phone: phone
+        phone: cleanPhone
       });
 
       const updatedUser = res.data || res.updatedUserDetails || {
         address: cleanAddress,
         city: cleanCity,
         state: cleanState,
-        phone: phone
+        phone: cleanPhone
       };
 
       updateUser(updatedUser);
@@ -100,10 +107,12 @@ export default function DeliveryAddressModal({
         address: cleanAddress,
         city: cleanCity,
         state: cleanState,
-        phone: phone
+        phone: cleanPhone
       });
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update delivery address');
+      const msg = err.message || 'Failed to update delivery address. Please try again.';
+      setErrorMsg(msg);
+      toast.error(msg);
       setIsSaving(false);
     }
   };
@@ -184,7 +193,7 @@ export default function DeliveryAddressModal({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
             {/* Street Address */}
             <div>
               <div className="flex items-center justify-between">
@@ -221,16 +230,12 @@ export default function DeliveryAddressModal({
                  id="phone"
                   type="tel"
                   value={phone}
+                  maxLength={10}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    setPhone(value);
-                   if (errorMsg) setErrorMsg("");
-                   if (value && !validatePhone(value)) {
-                      setErrorMsg("Please enter a valid 10-digit phone number.");
-                    }
+                    setPhone(e.target.value.replace(/\D/g, ''));
+                    if (errorMsg) setErrorMsg("");
                   }}
-                  rows={2}
-                  placeholder="Enter your number"
+                  placeholder="Enter 10-digit phone number"
                   className="w-full rounded-xl border border-line bg-cream pl-10 pr-4 py-2.5 text-sm text-teal-900 outline-none transition focus:border-teal-500 resize-none"
                   required
                 />

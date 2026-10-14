@@ -12,17 +12,22 @@ export default function ChangePassword({ onClose }) {
 
   const handleChangePassword = async () => {
     if (!oldPassword.trim()) {
-      toast.error("Please enter your current password");
+      toast.error("Please enter your current (old) password.");
       return;
     }
 
     if (!newPassword.trim()) {
-      toast.error("Please enter your new password");
+      toast.error("Please enter the new password you want to set.");
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters");
+      toast.error("New password is too short. Please use at least 6 characters.");
+      return;
+    }
+
+    if (newPassword === oldPassword) {
+      toast.error("New password must be different from your old password.");
       return;
     }
 

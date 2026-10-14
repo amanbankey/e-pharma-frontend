@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 import { authApi } from '../lib/api';
 
@@ -57,19 +58,29 @@ export default function ProfileModal({ isOpen, onClose }) {
     setErrorMsg('');
     setSuccessMsg('');
 
+    const fail = (msg) => {
+      setErrorMsg(msg);
+      toast.error(msg);
+    };
+
+    // Required: full name. Everything else is optional and only checked when filled in.
     if (!fullName.trim()) {
-      setErrorMsg('Full Name is required');
-      return;
+      return fail('Please enter your full name.');
+    }
+
+    if (phone.trim() && !/^\d{10}$/.test(phone.trim())) {
+      return fail('Phone number must be exactly 10 digits (without +91), or leave it empty.');
     }
 
     if (newPassword) {
       if (newPassword.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long');
-        return;
+        return fail('New password is too short. Please use at least 6 characters.');
+      }
+      if (!confirmPassword) {
+        return fail('Please re-enter your new password in the confirm field.');
       }
       if (newPassword !== confirmPassword) {
-        setErrorMsg('New password and confirm password do not match');
-        return;
+        return fail('New password and confirm password do not match.');
       }
     }
 
@@ -93,6 +104,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
       updateUser(updatedData);
       setSuccessMsg('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
       setNewPassword('');
       setConfirmPassword('');
 
@@ -101,7 +113,9 @@ export default function ProfileModal({ isOpen, onClose }) {
         onClose();
       }, 1200);
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update profile');
+      const msg = err.message || 'Failed to update profile. Please try again.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -121,7 +135,7 @@ export default function ProfileModal({ isOpen, onClose }) {
           className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border border-line bg-paper p-6 shadow-2xl md:p-8"
         >
           {/* Header */}
-          <div className="flex  items-center justify-between border-2 border-black  ">
+          <div className="flex  items-center justify-between  ">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-teal-100 text-teal-800">
                 <User size={20} />
@@ -154,7 +168,7 @@ export default function ProfileModal({ isOpen, onClose }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
             {/* Full Name */}
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
@@ -205,7 +219,8 @@ export default function ProfileModal({ isOpen, onClose }) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={10}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                   placeholder="e.g. 9876543210"
                   className="w-full rounded-xl border border-line bg-cream pl-10 pr-4 py-2.5 text-sm text-teal-900 outline-none transition focus:border-teal-500"
                 />
