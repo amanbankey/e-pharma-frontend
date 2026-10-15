@@ -85,7 +85,7 @@ export default function Login() {
                 maxLength={10}
                 required
                 placeholder="Enter 10-digit number"
-                className="w-full bg-transparent px-3 py-3 text-sm text-ink outline-none"
+                className="w-full bg- px-3 py-3 text-sm text-ink outline-none"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
                 autoFocus

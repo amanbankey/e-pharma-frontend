@@ -14,10 +14,12 @@ import PrivateRoute from './components/PrivateRoute'
 import NotFound from './pages/NotFound'
 import ForgotPassword from './components/ForgetPassword'
 import UpdatePassword from './pages/UpdatePassword'
+import ScrollToTop from './components/ScrollToTop'
 
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
+      <ScrollToTop />
       <Navbar />
       <main className="flex-1">
         <Routes>
