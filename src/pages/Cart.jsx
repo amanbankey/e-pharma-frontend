@@ -102,7 +102,7 @@ export default function Cart() {
         </div>
 
         {/* Order Summary & Checkout */}
-        <div className="h-fit rounded-2xl border border-line bg-paper p-6">
+        <div className="h-fit rounded-2xl border border-line bg-paper p-6 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           <h2 className="font-display text-xl text-teal-900">Order summary</h2>
           <div className="mt-4 flex justify-between text-sm text-ink-soft">
             <span>Subtotal</span>
