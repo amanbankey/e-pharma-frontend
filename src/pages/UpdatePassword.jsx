@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowLeft, Loader2, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '../lib/api';
+import { PASSWORD_MIN_LENGTH, getPasswordConditionErrors, isPasswordTooShort } from '../lib/passwordValidation';
 
 export default function UpdatePassword() {
   const [searchParams] = useSearchParams();
@@ -19,6 +20,7 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,11 +41,18 @@ export default function UpdatePassword() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      toast.error('Password is too short. Please use at least 6 characters.');
+    if (isPasswordTooShort(password)) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`);
+      toast.error(`Password is too short. Please use at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
+
+    const conditionErrors = getPasswordConditionErrors(password);
+    if (conditionErrors.length > 0) {
+      setPasswordErrors(conditionErrors);
+      return;
+    }
+    setPasswordErrors([]);
 
     if (password !== confirmPassword) {
       setError('New password and confirm password do not match.');
@@ -141,7 +150,10 @@ export default function UpdatePassword() {
                     required
                     placeholder="Enter new password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setPasswordErrors([]);
+                    }}
                     className="w-full rounded-xl border border-line bg-paper px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-1 focus:ring-teal-500 pr-11"
                   />
                   <button
@@ -153,6 +165,13 @@ export default function UpdatePassword() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {passwordErrors.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {passwordErrors.map((err) => (
+                      <li key={err} className="text-xs text-red-600">{err}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* Confirm Password */}
@@ -188,7 +207,7 @@ export default function UpdatePassword() {
               {/* Password Requirement Hint */}
               <div className="flex items-center gap-2 rounded-xl bg-teal-50 border border-teal-100 px-3.5 py-2.5 text-xs text-teal-800">
                 <ShieldCheck size={16} className="shrink-0 text-teal-700" />
-                <span>Password must be at least 6 characters long</span>
+                <span>Password must be at least 8 characters, with a letter, a number and a special character</span>
               </div>
 
               {error && (

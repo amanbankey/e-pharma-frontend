@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Info, Loader2, X, Lock } from "lucide-react";
 import { authApi } from "../lib/api";
+import { PASSWORD_MIN_LENGTH, getPasswordConditionErrors, isPasswordTooShort } from "../lib/passwordValidation";
 
 export default function ChangePassword({ onClose }) {
   const [oldPassword, setOldPassword] = useState("");
@@ -9,6 +10,7 @@ export default function ChangePassword({ onClose }) {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const handleChangePassword = async () => {
     if (!oldPassword.trim()) {
@@ -21,10 +23,17 @@ export default function ChangePassword({ onClose }) {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error("New password is too short. Please use at least 6 characters.");
+    if (isPasswordTooShort(newPassword)) {
+      toast.error(`New password is too short. Please use at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
+
+    const conditionErrors = getPasswordConditionErrors(newPassword);
+    if (conditionErrors.length > 0) {
+      setPasswordErrors(conditionErrors);
+      return;
+    }
+    setPasswordErrors([]);
 
     if (newPassword === oldPassword) {
       toast.error("New password must be different from your old password.");
@@ -117,7 +126,10 @@ export default function ChangePassword({ onClose }) {
                 type={showNewPassword ? "text" : "password"}
                 placeholder="Enter new password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPasswordErrors([]);
+                }}
                 className="flex-1 text-[#0F1B3D] text-[15px] py-3.5 bg-transparent outline-none placeholder:text-[#9CA3AF]"
               />
               <button
@@ -133,10 +145,18 @@ export default function ChangePassword({ onClose }) {
               </button>
             </div>
 
+            {passwordErrors.length > 0 && (
+              <ul className="mb-3 space-y-0.5">
+                {passwordErrors.map((err) => (
+                  <li key={err} className="text-xs text-red-600">{err}</li>
+                ))}
+              </ul>
+            )}
+
             <div className="flex items-center gap-1.5 bg-[#EEF2FF] rounded-[10px] p-2.5 mb-1">
               <Info size={14}  className="shrink-0 text-teal-900" />
               <span className="flex-1 text-xs text-[#374151] leading-4">
-                Use at least 6 characters with letters and numbers
+                Use at least 8 characters with a letter, a number and a special character
               </span>
             </div>
 

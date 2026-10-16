@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 import { authApi } from '../lib/api';
+import { PASSWORD_MIN_LENGTH, getPasswordConditionErrors, isPasswordTooShort } from '../lib/passwordValidation';
 
 export default function ProfileModal({ isOpen, onClose }) {
   const { user, updateUser } = useAuth();
@@ -36,6 +37,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -73,9 +75,15 @@ export default function ProfileModal({ isOpen, onClose }) {
     }
 
     if (newPassword) {
-      if (newPassword.length < 6) {
-        return fail('New password is too short. Please use at least 6 characters.');
+      if (isPasswordTooShort(newPassword)) {
+        return fail(`New password is too short. Please use at least ${PASSWORD_MIN_LENGTH} characters.`);
       }
+      const conditionErrors = getPasswordConditionErrors(newPassword);
+      if (conditionErrors.length > 0) {
+        setPasswordErrors(conditionErrors);
+        return;
+      }
+      setPasswordErrors([]);
       if (!confirmPassword) {
         return fail('Please re-enter your new password in the confirm field.');
       }
@@ -293,8 +301,11 @@ export default function ProfileModal({ isOpen, onClose }) {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="New password (min 6 chars)"
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setPasswordErrors([]);
+                    }}
+                    placeholder={`New password (min ${PASSWORD_MIN_LENGTH} chars)`}
                     className="w-full rounded-xl border border-line bg-paper px-4 py-2 text-sm text-teal-900 outline-none transition focus:border-teal-500 pr-10"
                   />
                   <button
@@ -305,6 +316,14 @@ export default function ProfileModal({ isOpen, onClose }) {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+
+                {passwordErrors.length > 0 && (
+                  <ul className="space-y-0.5">
+                    {passwordErrors.map((err) => (
+                      <li key={err} className="text-xs text-red-600">{err}</li>
+                    ))}
+                  </ul>
+                )}
 
                 {newPassword && (
                   <div className="relative">

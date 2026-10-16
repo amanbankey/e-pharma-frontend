@@ -16,6 +16,7 @@ import {
 import { orderApi } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import ProfileModal from '../components/ProfileModal';
+import Loader from '../components/Loader';
 
 const statusMeta = {
   pending: { label: 'Order Pending', icon: Clock, color: 'text-amber-700 bg-amber-100' },
@@ -90,7 +91,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {loading && <p className="mt-10 text-ink-soft">Loading orders…</p>}
+      {loading && <Loader label="Loading orders…" />}
       {error && <p className="mt-10 text-sm text-red-600">{error}</p>}
 
       {!loading && !error && orders.length === 0 && (

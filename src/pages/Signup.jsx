@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus, Phone, Lock, User, KeyRound, ArrowRight, Edit3, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '../lib/api';
+import { PASSWORD_MIN_LENGTH, getPasswordConditionErrors, isPasswordTooShort } from '../lib/passwordValidation';
 
 const Signup = () => {
   // Step 1: phone input, Step 2: fullName, phone (disabled), password, otp
@@ -19,6 +20,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -105,10 +107,17 @@ const Signup = () => {
       return;
     }
 
-    if (val.password.length < 6) {
-      toast.error('Password is too short. Please use at least 6 characters.');
+    if (isPasswordTooShort(val.password)) {
+      toast.error(`Password is too short. Please use at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
+
+    const conditionErrors = getPasswordConditionErrors(val.password);
+    if (conditionErrors.length > 0) {
+      setPasswordErrors(conditionErrors);
+      return;
+    }
+    setPasswordErrors([]);
 
     const cleanOtp = val.otp.trim();
     if (!cleanOtp) {
@@ -292,10 +301,13 @@ const Signup = () => {
                   <Lock size={16} className="text-ink-soft mr-2" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="At least 6 characters"
+                    placeholder="At least 8 characters"
                     className="w-full bg-transparent py-3 text-sm text-ink outline-none"
                     value={val.password}
-                    onChange={(e) => setVal({ ...val, password: e.target.value })}
+                    onChange={(e) => {
+                      setVal({ ...val, password: e.target.value });
+                      setPasswordErrors([]);
+                    }}
                     required
                   />
                   <button
@@ -306,6 +318,13 @@ const Signup = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {passwordErrors.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {passwordErrors.map((err) => (
+                      <li key={err} className="text-xs text-red-600">{err}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* OTP */}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
+import Loader from '../components/Loader';
 import { productApi, categoryApi, mapProduct } from '../lib/api';
 
 const ITEMS_PER_PAGE_OPTIONS = [24, 48, 96];
@@ -307,12 +308,7 @@ export default function Products() {
       <div ref={topGridRef} className="pt-6" />
 
       {/* Loading State */}
-      {loading && (
-        <div className="py-24 text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-3 border-teal-900 border-t-transparent" />
-          <p className="mt-4 text-sm font-medium text-ink-soft">Loading medicines catalogue…</p>
-        </div>
-      )}
+      {loading && <Loader label="Loading medicines catalogue…" className="py-24" size={40} />}
 
       {/* Error State */}
       {error && !loading && (
